@@ -1,0 +1,40 @@
+# base image derivation 
+FROM python:3.7-slim-stretch
+
+# initial argument and env 
+# initial arg env setup  
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Paris
+
+# setup required config 
+RUN apt-get update --fix-missing && \
+    apt-get install --yes --no-install-recommends \
+         tzdata dialog apt-utils \ 
+         gcc pkg-config git curl build-essential libpoppler-cpp-dev wget unzip cmake
+
+# define new user 
+RUN useradd --gid root --create-home solver 
+WORKDIR /home/solver
+
+# define new virutal environment 
+ENV VIRTUAL_ENV=/opt/venv
+RUN chmod -R g+rwx /home/solver && \
+    python -m venv $VIRTUAL_ENV --system-site-packages
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+
+# upgrade and install python dependencies  
+RUN pip install --upgrade pip && pip install click loguru pyzmq fastapi uvicorn sentence-transformers spacy networkx 
+RUN python -m spacy download fr_core_news_md
+RUN pip install protobuf  
+    
+COPY . ./
+
+# usefull environments 
+ENV TRANSFORMERS_CACHE="transformers_cache/"
+ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+
+
+# entrypoint 
+ENTRYPOINT ["python", "main.py"]
