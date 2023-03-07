@@ -19,7 +19,6 @@ To run the server in a Docker container, execute:
 ```bash
 docker run --rm -it --name text-semantic-embedding -v path/to/transformers_cache:/home/solver/transformers_cache -p 8000:8000 text-semantic-embedding:0.0 start-services --port 8000 --hostname '0.0.0.0' --mounting_path ''
 ```
-
 This will start the server on `localhost:8000` with a mounted directory for the transformers cache.
 
 ## Dockerfile
