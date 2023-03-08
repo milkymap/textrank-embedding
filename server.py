@@ -42,33 +42,24 @@ class APIServer:
         self.publisher_address = publisher_address        
         self.opened_sockets = 0 
 
-        self.core = FastAPI(**self.app_description, docs_url=self.mounting_path)
+        self.core = FastAPI(**self.app_description, docs_url='/')
 
         self.core.add_event_handler('startup', self.handle_startup)
         self.core.add_event_handler('shutdown', self.handle_shutdown)
         
         self.core.add_api_route(
-            path=path.join(self.mounting_path, 'heartbit'), 
+            path='/heartbit', 
             endpoint=self.handle_entrypoint, 
             methods=['GET'], 
             response_model=EntrypointResponseModel
         )
         self.core.add_api_route(
-            path=path.join(self.mounting_path, 'compute_embedding'), 
+            path='/compute_embedding', 
             endpoint=self.handle_compute_embedding, 
             methods=['POST'], 
             response_model=ComputeEmbeddingResponseModel
         )
     
-        self.customize_openapi()
-
-    def customize_openapi(self):
-        if self.core.openapi_schema is not None:
-            return self.core.openapi_schema
-        openapi_schema = get_openapi(**self.app_description, routes=self.core.routes)
-        self.core.openapi_schema = openapi_schema
-        return self.core.openapi_schema    
-
     async def handle_startup(self):
         self.ctx = aiozmq.Context()
         self.ctx.set(zmq.MAX_SOCKETS, 32768)
@@ -102,7 +93,7 @@ class APIServer:
                 if not self.vectorizer_is_alive.is_set():
                     logger.warning(f'server can not process the incoming req : vectorizer is down')
                     return JSONResponse(
-                        status_code=400,
+                        status_code=500,
                         content=ComputeEmbeddingResponseModel(
                             status=False,
                             content=ComputeEmbeddingResponseContentModel(),
@@ -126,7 +117,7 @@ class APIServer:
                 logger.error(error)
                 
                 return JSONResponse(
-                    status_code=400,
+                    status_code=500,
                     content=ComputeEmbeddingResponseModel(
                         status=False,
                         content=ComputeEmbeddingResponseContentModel(),
@@ -140,7 +131,7 @@ class APIServer:
 
             map_loop_status2error = {
                 0: 'TIMEOUT... >= 60s',
-                2: 'Vectorizer is not availble',
+                2: 'Vectorizer is not available',
                 3: 'Vectorizer was not able to compute the embedding' 
             }
 
@@ -182,7 +173,7 @@ class APIServer:
                     
                 if keep_loop in [0, 2, 3]:
                     return JSONResponse(
-                        status_code=200,
+                        status_code=500,
                         content=ComputeEmbeddingResponseModel(
                             status=False,
                             content=None,
@@ -214,7 +205,7 @@ class APIServer:
                     self.opened_sockets -= 1
                 
                 return JSONResponse(
-                    status_code=400,
+                    status_code=500,
                     content=ComputeEmbeddingResponseModel(
                         status=False,
                         content=ComputeEmbeddingResponseContentModel(),
@@ -224,7 +215,7 @@ class APIServer:
         # end semaphore acess card context manager 
 
     def start(self):
-        uvicorn.run(app=self.core, port=self.port, host=self.host)
+        uvicorn.run(app=self.core, port=self.port, host=self.host, root_path=self.mounting_path)
 
 def start_server(port:int, hostname:str, router_address:str, publisher_address:str, mounting_path:str, workers_barrier:mp.Barrier):
     server_ = APIServer(port=port, host=hostname, router_address=router_address, publisher_address=publisher_address, mounting_path=mounting_path, workers_barrier=workers_barrier)
