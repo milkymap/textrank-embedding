@@ -30,12 +30,12 @@ def command_line_interface(ctx:click.core.Context, transformers_cache:str):
 @click.option('--language_model_name', type=str, default='fr_core_news_md')
 @click.option('--router_address', type=str, default='ipc://router.ipc')
 @click.option('--publisher_address', type=str, default='ipc://publisher.ipc')
-@click.option('--mounting_path', type=str, default='/backend/api')
+@click.option('--mounting_path', type=str, default='/')
 @click.pass_context
 def start_services(ctx:click.core.Context, port:int, hostname:str, transformer_model_name:str, language_model_name:str, router_address:str, publisher_address:str, mounting_path:str):
+    assert mounting_path.startswith('/')
     cache_folder = ctx.obj['cache_folder']
     
-
     workers_barrier = mp.Barrier(parties=2)
 
     server_process = mp.Process(

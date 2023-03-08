@@ -9,10 +9,12 @@ import time
 import uvicorn
 
 import multiprocessing as mp 
+from os import path 
 
 from fastapi import FastAPI, APIRouter, UploadFile, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.openapi.utils import get_openapi
 
 from loguru import logger 
 
@@ -21,7 +23,16 @@ from api_schema import EntrypointResponseModel, EntrypointResponseContentModel
 from api_schema import ComputeEmbeddingRequestModel, ComputeEmbeddingResponseModel, ComputeEmbeddingResponseContentModel
 
 class APIServer:
+    app_description = {
+        "title":"text-semantic-embedding", 
+        "version": 1.0, 
+        "description":"""
+            semantic embedding based on textrank and french_semantic
+        """
+    }
+
     def __init__(self, port:int, host:str, router_address:str, publisher_address:str, mounting_path:str, workers_barrier:mp.Barrier):
+        
         self.port = port 
         self.host = host 
         self.mounting_path = mounting_path
@@ -31,22 +42,32 @@ class APIServer:
         self.publisher_address = publisher_address        
         self.opened_sockets = 0 
 
-        self.core = FastAPI()
+        self.core = FastAPI(**self.app_description, docs_url=self.mounting_path)
+
         self.core.add_event_handler('startup', self.handle_startup)
         self.core.add_event_handler('shutdown', self.handle_shutdown)
         
         self.core.add_api_route(
-            path='/', 
+            path=path.join(self.mounting_path, 'heartbit'), 
             endpoint=self.handle_entrypoint, 
             methods=['GET'], 
             response_model=EntrypointResponseModel
         )
         self.core.add_api_route(
-            path='/compute_embedding', 
+            path=path.join(self.mounting_path, 'compute_embedding'), 
             endpoint=self.handle_compute_embedding, 
             methods=['POST'], 
             response_model=ComputeEmbeddingResponseModel
         )
+    
+        self.customize_openapi()
+
+    def customize_openapi(self):
+        if self.core.openapi_schema is not None:
+            return self.core.openapi_schema
+        openapi_schema = get_openapi(**self.app_description, routes=self.core.routes)
+        self.core.openapi_schema = openapi_schema
+        return self.core.openapi_schema    
 
     async def handle_startup(self):
         self.ctx = aiozmq.Context()
@@ -203,7 +224,7 @@ class APIServer:
         # end semaphore acess card context manager 
 
     def start(self):
-        uvicorn.run(app=self.core, port=self.port, host=self.host, root_path=self.mounting_path)
+        uvicorn.run(app=self.core, port=self.port, host=self.host)
 
 def start_server(port:int, hostname:str, router_address:str, publisher_address:str, mounting_path:str, workers_barrier:mp.Barrier):
     server_ = APIServer(port=port, host=hostname, router_address=router_address, publisher_address=publisher_address, mounting_path=mounting_path, workers_barrier=workers_barrier)
