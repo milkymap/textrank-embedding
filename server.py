@@ -53,6 +53,7 @@ class APIServer:
             methods=['GET'], 
             response_model=EntrypointResponseModel
         )
+        
         self.core.add_api_route(
             path='/compute_embedding', 
             endpoint=self.handle_compute_embedding, 
@@ -220,4 +221,3 @@ class APIServer:
 def start_server(port:int, hostname:str, router_address:str, publisher_address:str, mounting_path:str, workers_barrier:mp.Barrier):
     server_ = APIServer(port=port, host=hostname, router_address=router_address, publisher_address=publisher_address, mounting_path=mounting_path, workers_barrier=workers_barrier)
     server_.start()
-    
