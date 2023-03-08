@@ -40,7 +40,7 @@ class ZMQVectorizer:
                     text = encoded_text.decode('utf-8')
                     sentences = to_sentences(text, self.language_model, valid_length=3)    
                     if len(sentences) == 0:
-                        sentences = [text]
+                        embedding = self.transformer_model.encode(text, device='cpu')
                     else: 
                         embeddings = self.transformer_model.encode(sentences, device='cpu')
                         if len(sentences) == 1:
