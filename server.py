@@ -124,7 +124,7 @@ class APIServer:
                         request_id=incoming_req.request_id,
                         content=ComputeEmbeddingResponseContentModel(),
                         error_message=error 
-                    )
+                    ).dict()
                 )
             
             async with self.socket_mutex:
@@ -143,7 +143,7 @@ class APIServer:
                 
                 counter = 0
                 keep_loop = 0 
-                while keep_loop == 0 and counter < 60000:
+                while keep_loop == 0 and counter < 1200000:
                     map_socket2status = dict(await poller.poll(100))
                     dealer_polled_status = map_socket2status.get(dealer_socket, None)
                     subscriber_polled_status = map_socket2status.get(subscriber_socket, None)
@@ -162,7 +162,7 @@ class APIServer:
                                 if self.vectorizer_is_alive.is_set():
                                     self.vectorizer_is_alive.clear()
                             keep_loop = 2 
-                    counter += 100 
+                    counter += 100 # 100ms 
                 # end while loop 
 
                 poller.unregister(dealer_socket)

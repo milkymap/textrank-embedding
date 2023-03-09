@@ -1,6 +1,9 @@
 import click 
 import uvicorn
 
+import torch as th 
+import torch.multiprocessing as tmp 
+
 from loguru import logger 
 from typing import List, Tuple, Dict, Optional 
 
@@ -15,10 +18,12 @@ from vectorizer import start_vectorizer
 
 @click.group(chain=False, invoke_without_command=True)
 @click.option('--transformers_cache', envvar='TRANSFORMERS_CACHE', required=True)
+@click.option('--gpu_index', help='index of the target gpu card, if cuda not availble, model will be on cpu. this value can be on of [0..7] for 8 gpu card', type=click.IntRange(min=0, max=8), default=0)
 @click.pass_context
-def command_line_interface(ctx:click.core.Context, transformers_cache:str):
+def command_line_interface(ctx:click.core.Context, transformers_cache:str, gpu_index:int):
     ctx.ensure_object(dict)
     ctx.obj['cache_folder'] = transformers_cache
+    ctx.obj['gpu_index'] = gpu_index
     crr_command = ctx.invoked_subcommand
     if crr_command is not None:
         logger.debug(f'{crr_command} was called')
@@ -58,7 +63,8 @@ def start_services(ctx:click.core.Context, port:int, hostname:str, transformer_m
             'cache_folder': cache_folder,
             'router_address': router_address, 
             'publisher_address': publisher_address,
-            'workers_barrier': workers_barrier
+            'workers_barrier': workers_barrier,
+            'gpu_index': ctx.obj['gpu_index']
         }
     )
 
@@ -87,4 +93,6 @@ def start_services(ctx:click.core.Context, port:int, hostname:str, transformer_m
         server_process.join()
 
 if __name__ == '__main__':
+    if th.cuda.is_available():
+        tmp.set_start_method('spawn')
     command_line_interface()

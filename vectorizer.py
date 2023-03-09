@@ -3,6 +3,7 @@ import zmq
 import numpy as np 
 import multiprocessing as mp 
 
+import torch as th 
 import operator as op 
 
 from time import sleep, perf_counter
@@ -13,11 +14,13 @@ from libraries.strategies import (
     to_sentences
 )
 
+#docker run --rm -it --name embedding -v /home/ibrahima/Volume/transformers_cache/:/home/solver/transformers_cache -p 8090:8000 embedding:gpu-0.0 start-services --port 8000 --hostname '0.0.0.0' --mounting_path '/'
+
 
 class ZMQVectorizer:
-    def __init__(self, workers_barrier:mp.Barrier, router_address:str, publisher_address:str, transformer_model_name:str, language_model_name:str, cache_folder:str):
+    def __init__(self, workers_barrier:mp.Barrier, router_address:str, publisher_address:str, transformer_model_name:str, language_model_name:str, cache_folder:str, gpu_index:int):
         self.workers_barrier = workers_barrier
-
+        self.gpu_index = gpu_index
         self.router_address = router_address
         self.publisher_address = publisher_address
 
@@ -41,15 +44,15 @@ class ZMQVectorizer:
                         text = encoded_text.decode('utf-8')
                         sentences = to_sentences(text, self.language_model, valid_length=1)    
                         if len(sentences) == 0:  # can not split text to sentences 
-                            embedding = self.transformer_model.encode(text, device='cpu')
+                            embedding = self.transformer_model.encode(text, device=self.device)
                         else: 
-                            embeddings = self.transformer_model.encode(sentences, device='cpu')
+                            embeddings = self.transformer_model.encode(sentences, device=self.device)
                             if len(sentences) == 1:
                                 embedding = embeddings[0]
                             else:
                                 nb_nodes = len(sentences)
                                 adjacency_matrix = compute_pairwise_matrix(embeddings)
-                                scores = np.sum(adjacency_matrix, axis=0) / nb_nodes 
+                                scores = np.sum(adjacency_matrix, axis=1) / nb_nodes 
                                 embedding = np.mean(embeddings * scores[:, None], axis=0)
                     except Exception as e:
                         logger.error(e)
@@ -73,8 +76,11 @@ class ZMQVectorizer:
             logger.debug('vectorizer will load the language model')
             self.language_model = load_language_model(self.language_model_name)
             logger.debug('vectotorize is loading the transformers model')
-            self.transformer_model = load_sentence_transformer(self.transformer_model_name, self.cache_folder)
+            logger.debug(f'number of detected gpu card : {th.cuda.device_count()}')
+            self.device = th.device('cpu' if not th.cuda.is_available() else f'cuda:{self.gpu_index}')
+            self.transformer_model = load_sentence_transformer(self.transformer_model_name, self.cache_folder, device=self.device)
             logger.success('vectorizer has finished to load the transformers and the language model')
+            logger.success(f'transformer is on the device : {self.device}')
         except Exception as e:
             logger.error(e)
         else:
@@ -102,6 +108,6 @@ class ZMQVectorizer:
             logger.success('vectorizer has reeased all zeromq ressources')
         logger.debug('vectorizer shutdown...!')
 
-def start_vectorizer(transformer_model_name:str, cache_folder:str, language_model_name:str, router_address:str, publisher_address:str, workers_barrier:mp.Barrier):
-    with ZMQVectorizer(router_address=router_address, publisher_address=publisher_address, transformer_model_name=transformer_model_name, language_model_name=language_model_name, cache_folder=cache_folder, workers_barrier=workers_barrier) as agent:
+def start_vectorizer(transformer_model_name:str, cache_folder:str, language_model_name:str, router_address:str, publisher_address:str, workers_barrier:mp.Barrier, gpu_index:int):
+    with ZMQVectorizer(router_address=router_address, publisher_address=publisher_address, transformer_model_name=transformer_model_name, language_model_name=language_model_name, cache_folder=cache_folder, workers_barrier=workers_barrier, gpu_index=gpu_index) as agent:
         agent.start_loop()
