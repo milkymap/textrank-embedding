@@ -14,11 +14,11 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Tuple  
 
 def load_language_model(model_name:str) -> Language:
-    model = spacy.load(model_name)
+    model = spacy.load(name=model_name)
     return model 
 
-def load_sentence_transformer(model_name:str, cache_folder:str='cache') -> SentenceTransformer:
-    sentence_model = SentenceTransformer(model_name, cache_folder=cache_folder)
+def load_sentence_transformer(model_name:str, cache_folder:str='cache', device:str='cpu') -> SentenceTransformer:
+    sentence_model = SentenceTransformer(model_name, cache_folder=cache_folder, device=device)
     return sentence_model
 
 def to_sentences(text:str, spacy_model:Language, valid_length:str) -> List[str]:
@@ -34,7 +34,8 @@ def to_sentences(text:str, spacy_model:Language, valid_length:str) -> List[str]:
 def compute_fingerprint(document:List[str], vectorizer:SentenceTransformer, device:str='cpu') -> np.ndarray:
     embedding = vectorizer.encode(
         sentences=document,
-        device=device 
+        device=device,
+        convert_to_numpy=True
     )
     return embedding
 
