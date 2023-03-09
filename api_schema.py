@@ -21,10 +21,12 @@ class EntrypointResponseModel(GenericResponseModel):
 
 
 class ComputeEmbeddingRequestModel(BaseModel):
+    request_id:str 
     text:str 
 
 class ComputeEmbeddingResponseContentModel(BaseModel):
     embedding:List[float]=[]
 
 class ComputeEmbeddingResponseModel(GenericResponseModel):
+    request_id:str 
     content:Optional[ComputeEmbeddingResponseContentModel]=None

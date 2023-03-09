@@ -96,6 +96,7 @@ class APIServer:
                         status_code=500,
                         content=ComputeEmbeddingResponseModel(
                             status=False,
+                            request_id=incoming_req.request_id,
                             content=ComputeEmbeddingResponseContentModel(),
                             error_message='vectorizer is not alive ...!' 
                         ).dict()
@@ -120,6 +121,7 @@ class APIServer:
                     status_code=500,
                     content=ComputeEmbeddingResponseModel(
                         status=False,
+                        request_id=incoming_req.request_id,
                         content=ComputeEmbeddingResponseContentModel(),
                         error_message=error 
                     )
@@ -130,7 +132,7 @@ class APIServer:
                 logger.debug(f'server get a new request for making embedding...! {self.opened_sockets}')
 
             map_loop_status2error = {
-                0: 'TIMEOUT... >= 60s',
+                0: 'TIMEOUT... this request take too long time to be processed >= 60s',
                 2: 'Vectorizer is not available',
                 3: 'Vectorizer was not able to compute the embedding' 
             }
@@ -176,6 +178,7 @@ class APIServer:
                         status_code=500,
                         content=ComputeEmbeddingResponseModel(
                             status=False,
+                            request_id=incoming_req.request_id,
                             content=None,
                             error_message=map_loop_status2error[keep_loop]
                         ).dict()
@@ -186,6 +189,7 @@ class APIServer:
                     status_code=200,
                     content=ComputeEmbeddingResponseModel(
                         status=True,
+                        request_id=incoming_req.request_id,
                         content=ComputeEmbeddingResponseContentModel(
                             embedding=embedding.tolist()
                         )
@@ -208,6 +212,7 @@ class APIServer:
                     status_code=500,
                     content=ComputeEmbeddingResponseModel(
                         status=False,
+                        request_id=incoming_req.request_id,
                         content=ComputeEmbeddingResponseContentModel(),
                         error_message=error 
                     ).dict()

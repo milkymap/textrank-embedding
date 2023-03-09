@@ -9,7 +9,7 @@ from time import sleep, perf_counter
 from libraries.log import logger 
 from libraries.strategies import (
     load_language_model, load_sentence_transformer, 
-    compute_pairwise_matrix, semantic_textrank,
+    compute_pairwise_matrix,
     to_sentences
 )
 
@@ -37,19 +37,23 @@ class ZMQVectorizer:
                 polled_status = self.router_socket.poll(100)  # 100ms 
                 if polled_status == zmq.POLLIN:
                     client_address, _, encoded_text = self.router_socket.recv_multipart()
-                    text = encoded_text.decode('utf-8')
-                    sentences = to_sentences(text, self.language_model, valid_length=3)    
-                    if len(sentences) == 0:
-                        embedding = self.transformer_model.encode(text, device='cpu')
-                    else: 
-                        embeddings = self.transformer_model.encode(sentences, device='cpu')
-                        if len(sentences) == 1:
-                            embedding = embeddings[0]
-                        else:
-                            adjacency_matrix = compute_pairwise_matrix(embeddings)
-                            _, scores = semantic_textrank(adjacency_matrix) # ignore indices  
-                            print(sorted(list(zip(sentences, scores)), key=op.itemgetter(1), reverse=True))                         
-                            embedding = np.mean(embeddings * np.array(scores)[:, None], axis=0)
+                    try:
+                        text = encoded_text.decode('utf-8')
+                        sentences = to_sentences(text, self.language_model, valid_length=1)    
+                        if len(sentences) == 0:  # can not split text to sentences 
+                            embedding = self.transformer_model.encode(text, device='cpu')
+                        else: 
+                            embeddings = self.transformer_model.encode(sentences, device='cpu')
+                            if len(sentences) == 1:
+                                embedding = embeddings[0]
+                            else:
+                                nb_nodes = len(sentences)
+                                adjacency_matrix = compute_pairwise_matrix(embeddings)
+                                scores = np.sum(adjacency_matrix, axis=0) / nb_nodes 
+                                embedding = np.mean(embeddings * scores[:, None], axis=0)
+                    except Exception as e:
+                        logger.error(e)
+                        embedding = None 
                     self.router_socket.send_multipart([client_address, b''], flags=zmq.SNDMORE)
                     self.router_socket.send_pyobj(embedding)
             except KeyboardInterrupt:
