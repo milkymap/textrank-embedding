@@ -12,12 +12,20 @@ This project contains a Dockerfile and Python code to run a FastAPI server that 
 To build the Docker image, run the following command:
 
 ```bash
-docker build -t text-semantic-embedding:0.0 -f Dockerfile.cpu
+# cpu
+docker build -t text-semantic-embedding:cpu-0.0 -f Dockerfile.cpu
+# gpu
+docker build -t text-semantic-embedding:gpu-0.0 -f Dockerfile.cpu
 ```
 
 To run the server in a Docker container, execute:
 ```bash
+# for cpu
 docker run --rm -it --name text-semantic-embedding -v path/to/transformers_cache:/home/solver/transformers_cache -p 8000:8000 text-semantic-embedding:0.0 start-services --port 8000 --hostname '0.0.0.0' --mounting_path '/'
+
+#for gpu 
+docker run --rm -it --name text-semantic-embedding -v path/to/transformers_cache/:/home/solver/transformers_cache -p 8090:8000 text-semantic-embedding:gpu-0.0 --gpu_index 0 start-services --port 8000 --hostname '0.0.0.0' --mounting_path '/'
+
 ```
 This will start the server on `localhost:8000` with a mounted directory for the transformers cache.
 
