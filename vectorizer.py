@@ -49,7 +49,7 @@ class ZMQVectorizer:
                             else:
                                 nb_nodes = len(sentences)
                                 adjacency_matrix = compute_pairwise_matrix(embeddings)
-                                scores = np.sum(adjacency_matrix, axis=0) / nb_nodes 
+                                scores = np.sum(adjacency_matrix, axis=1) / nb_nodes 
                                 embedding = np.mean(embeddings * scores[:, None], axis=0)
                     except Exception as e:
                         logger.error(e)

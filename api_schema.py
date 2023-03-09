@@ -19,7 +19,6 @@ class EntrypointResponseContentModel(BaseModel):
 class EntrypointResponseModel(GenericResponseModel):
     content:Optional[EntrypointResponseContentModel]=None 
 
-
 class ComputeEmbeddingRequestModel(BaseModel):
     request_id:str 
     text:str 

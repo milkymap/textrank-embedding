@@ -53,7 +53,7 @@ class APIServer:
             methods=['GET'], 
             response_model=EntrypointResponseModel
         )
-        
+
         self.core.add_api_route(
             path='/compute_embedding', 
             endpoint=self.handle_compute_embedding, 
@@ -99,7 +99,7 @@ class APIServer:
                             status=False,
                             request_id=incoming_req.request_id,
                             content=ComputeEmbeddingResponseContentModel(),
-                            error_message='vectorizer is not alive ...!' 
+                            error_message='vectorizer is not alive? The service is DOWN...!' 
                         ).dict()
                     )
                 
